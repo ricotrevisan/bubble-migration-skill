@@ -74,7 +74,7 @@ Scenario: Budget must be positive
   Then I see an error and no job is created
 ```
 
-Notes: anything a builder needs that the criteria do not say.
+Notes: context a builder needs that is not a rule (rules are scenarios).
 ````
 
 - **status**: `observed` when you saw it work in the browser (needs `evidence`); `inferred` when only the export shows it, such as a scheduled job or webhook (needs `inventory_refs`); `drop-candidate` for a feature that looks dead (unreachable, unused), backed by a decision.

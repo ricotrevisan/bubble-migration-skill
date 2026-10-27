@@ -5,6 +5,7 @@ Write the stories, then the maps a builder needs beside them. Formats: [`../refe
 1. **Stories**, one file each in `stories/`:
    - One story per **user goal** ("post a job"). Edit, close or delete get their own story when they have their own rules ("only while open").
    - Every condition you saw on a button or a page is a scenario: who sees it, and when it disappears. Every privacy rule is an "others cannot see" scenario.
+   - A rule lives in a scenario. When you catch yourself writing a rule in Notes ("only the owner may…", "only while…"), turn it into a scenario instead.
    - Every validation error you hit is a scenario.
    - Emails, scheduled jobs and webhooks are stories too: persona `system`, written from the point of view of whoever benefits.
    - Built-in features count: sign-up, log-in, password reset.
