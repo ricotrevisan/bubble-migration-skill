@@ -1,6 +1,6 @@
 ---
 name: bubble-migration
-description: Turn an existing Bubble.io app into a stack-neutral migration backlog in `.migration/`: personas, user stories with acceptance criteria and evidence, a workflow map, the data model, integrations and open questions for the owner. Use when moving an app off Bubble, rebuilding a Bubble app in code, or documenting what a Bubble app actually does.
+description: "Turn an existing Bubble.io app into a stack-neutral migration backlog in `.migration/`: personas, user stories with acceptance criteria and evidence, a workflow map, the data model, integrations and open questions for the owner. Use when moving an app off Bubble, rebuilding a Bubble app in code, or documenting what a Bubble app actually does."
 ---
 
 # Bubble app → migration backlog

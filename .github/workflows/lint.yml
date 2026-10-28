@@ -1,0 +1,9 @@
+name: lint
+on: [push, pull_request]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -I tests/lint_skill.py
+      - run: python3 -I -m py_compile scripts/inventory.py scripts/check.py
