@@ -39,6 +39,12 @@ class App:
         defs = data.get("element_definitions") or {}
         # Instances name their definition by its `id`, which can differ from its map key.
         self.reusables = {v.get("id", k): v for k, v in defs.items() if isinstance(v, dict)}
+        self.backend_names = {v.get("id"): (v.get("properties") or {}).get("wf_name") or (v.get("properties") or {}).get("event_name")
+                              for v in vals(data.get("api"))}
+        cs = (data.get("settings") or {}).get("client_safe") or {}
+        self.api_call_names = {f"{gid}.{cid}": f"{g.get('human')} - {c.get('name')}"
+                               for gid, g in (cs.get("apiconnector2") or {}).items() if isinstance(g, dict)
+                               for cid, c in (g.get("calls") or {}).items() if isinstance(c, dict)}
         self.names = {}  # element id -> label
         self.page_of = {}  # element id -> root name
         for kind, roots in (("page", self.pages), ("reusable", self.reusables)):
@@ -51,6 +57,21 @@ class App:
                     self.page_of[e["id"]] = root.get("name") or root.get("display")
 
     # helpers
+
+    def trigger(self, wf):
+        p = wf.get("properties") or {}
+        t = wf.get("type")
+        if t == "APIEvent":
+            return f"backend workflow `{p.get('wf_name')}` is called" + (
+                f" (public endpoint /api/1.1/wf/{p.get('wf_name')}, {'no' if str(p.get('auth_unecessary')).lower() == 'true' else 'with'} authentication)"
+                if p.get("expose") else " (scheduled or called by the app)")
+        if t == "DatabaseTriggerEvent":
+            return f"a {self.type_name(p.get('data_trigger_type'))} changes (database trigger `{p.get('event_name')}`)"
+        if t == "RecurringEvent":
+            return f"recurring event `{p.get('event_name')}` on a {self.type_name(p.get('custom_event_data_type'))}"
+        if p.get("element_id"):
+            return f"{t} on {self.names.get(p['element_id'], p['element_id'])}"
+        return t
 
     def elements(self, node):
         for e in vals(node.get("elements")):
@@ -132,6 +153,13 @@ class App:
             s = f"URL parameter {p.get('parameter_name', '')}"
         elif t == "CurrentWorkflowItem":
             s = "workflow input" + (f" {p.get('param_id')}" if p.get("param_id") else "")
+        elif t == "CurrentDataItem":
+            s = "the changed thing (after the change)"
+        elif t == "OldDataItem":
+            s = "the changed thing (before the change)"
+        elif t == "APIEventParameter":
+            pid = p.get("param_id", "")
+            s = "request body" if pid == "_wf_request_data" else f"request field {pid.removeprefix('_wf_')}"
         elif t == "PreviousStep":
             s = "result of an earlier step"
         elif t == "Message":
@@ -143,6 +171,8 @@ class App:
             name = n.get("name", "")
             if name.startswith("custom."):
                 name = "state " + name[7:].rstrip("_")
+            elif name.startswith("_wf_") or name.startswith("_api_c2_"):
+                name = name.removeprefix("_wf_").removeprefix("_api_c2_")
             else:
                 name = self.field_name(name)
             arg = n.get("args")
@@ -162,9 +192,7 @@ class App:
         out = []
         for wf in vals(root.get("workflows")):
             p = wf.get("properties") or {}
-            trigger = wf.get("type")
-            if p.get("element_id"):
-                trigger += " on " + self.names.get(p["element_id"], p["element_id"])
+            trigger = self.trigger(wf)
             actions = []
             for a in vals(wf.get("actions")):
                 ap = a.get("properties") or {}
@@ -181,6 +209,10 @@ class App:
                         detail["element"] = self.names.get(v, v)
                     elif k in ("thing_type", "type_to_change"):
                         detail[k] = self.type_name(v)
+                    elif k == "api_event":
+                        detail["backend_workflow"] = self.backend_names.get(v, v)
+                    elif k.startswith("_wf_param_"):
+                        detail["with " + k.removeprefix("_wf_param_")] = self.render(v) if isinstance(v, dict) else v
                     else:
                         detail[k] = self.render(v) if isinstance(v, dict) else v
                 act = {"type": a.get("type"), "detail": detail}
@@ -188,6 +220,9 @@ class App:
                     act["only_when"] = self.render(ap["condition"])
                 if a.get("type") in EFFECT_ACTIONS:
                     act["effect"] = EFFECT_ACTIONS[a.get("type")]
+                elif str(a.get("type", "")).startswith("apiconnector2-"):
+                    act["effect"] = "api"
+                    act["api_call"] = self.api_call_names.get(a["type"].removeprefix("apiconnector2-"), a["type"])
                 actions.append(act)
             item = {"ref": f"wf:{where}/{wf.get('id')}", "where": where, "trigger": trigger, "actions": actions}
             if p.get("condition") is not None:
@@ -290,9 +325,17 @@ class App:
                 if c.get("url"):
                     calls.append({"ref": f"call:{g.get('human')}/{c.get('name')}", "group": g.get("human"), "name": c.get("name"),
                                   "method": c.get("method"), "url": re.sub(r"\?.*", "?…", str(c.get("url"))), "use_as": c.get("publish_as")})
-        effects = [{"where": w["where"], "trigger": w["trigger"], "effect": a["effect"], "action": a["type"], "detail": a["detail"]}
+        effects = [{"where": w["where"], "trigger": w["trigger"], "effect": a["effect"], "action": a.get("api_call") or a["type"], "detail": a["detail"]}
                    for w in [w for p in pages for w in p["workflows"]] + [w for r in reusables for w in r["workflows"]] + backend
                    for a in w["actions"] if a.get("effect")]
+        text = json.dumps(self.d)
+        for p in pages:
+            if p["reached_from"]:
+                continue
+            pat = re.compile(r"(?:/|%2F)" + re.escape(p["name"]) + r"(?:[?\"/#\\]|%3F|%2F|$)", re.I)
+            own = json.dumps(next((x for x in vals(self.pages) if x.get("name") == p["name"]), {}))
+            if len(pat.findall(text)) > len(pat.findall(own)):
+                p["reached_from"] = ["a URL elsewhere in the app (redirect, email or API call)"]
         hints = [f"page `{p['name']}` has no link or navigation into it" for p in pages
                  if not p["reached_from"] and p["name"] not in ("index", "404", "reset_pw")]
         hints += [f"type `{t['name']}` is never created by a workflow" for t in types if not t["created_by_a_workflow"]]
@@ -345,7 +388,10 @@ def markdown(inv):
         L.append("")
     L += ["## Option sets", ""] + [f"- `{o['ref']}`: {', '.join(o['values'])}" for o in inv["option_sets"]] + [""]
     L += ["## API calls", ""] + ([f"- `{c['ref']}` {c['method']} {c['url']} ({c['use_as']})" for c in inv["api_calls"]] or ["none"]) + [""]
-    L += ["## Side effects", ""] + ([f"- {e['effect']}: {e['action']} in {e['where']} on {e['trigger']}" for e in inv["side_effects"]] or ["none"]) + [""]
+    def effect(e):
+        extra = e["detail"].get("subject") or e["detail"].get("backend_workflow") or ""
+        return f"- {e['effect']}: {e['action']}{(' (' + str(extra)[:80] + ')') if extra else ''} in {e['where']} when {e['trigger']}"
+    L += ["## Side effects", ""] + ([effect(e) for e in inv["side_effects"]] or ["none"]) + [""]
     L += ["## Dead-feature hints", ""] + ([f"- {h}" for h in inv["dead_feature_hints"]] or ["none"]) + [""]
     return "\n".join(L)
 
