@@ -16,9 +16,9 @@ Use the app the way its people do, one role at a time, and write down what you s
 For the logged-out visitor, then each account:
 
 1. Sign in (sign up first if the user is new: sign-up is a story too).
-2. Visit everything the navigation offers this role. On each page, read what is shown and why it is shown to *this* role.
+2. Visit everything the navigation offers this role. On each page, read what is shown and why it is shown to *this* role. A page several roles share (a profile, a detail page) usually shows each role something different: journal what this role sees there.
 3. Do each thing the page lets you do, with realistic values: create, edit, change status, cancel. Prefer records you created; name them so you recognise them (`QA Logo for a café`).
-4. Probe each form once with a required field empty and once with an invalid value; note the error.
+4. Probe each form once with a required field empty, once with an invalid value, and once with a value that must be unique but is taken (an email that already has an account, a duplicate entry); note each error.
 5. Open the other roles' pages by URL and note what happens.
 6. When an action should send an email and you can read the inbox, check it arrived and what it says.
 
