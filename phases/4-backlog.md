@@ -7,6 +7,7 @@ Write the stories, then the maps a builder needs beside them. Formats: [`../refe
    - Every condition you saw on a button or a page is a scenario: who sees it, and when it disappears. Every privacy rule is an "others cannot see" scenario about the data itself: it never reaches their browser, not merely stays off their screen. That is what tells the builder to enforce it on the server.
    - A rule lives in a scenario. When you catch yourself writing a rule in Notes ("only the owner may…", "only while…"), turn it into a scenario instead.
    - Every validation error you hit is a scenario.
+   - Every setting an admin can change gets a scenario for records that already exist: what keeps its old value and what follows the new one.
    - A page several roles share gets a scenario for each role's view: what each one sees and can change there.
    - Emails, scheduled jobs and webhooks are stories too: persona `system`, written from the point of view of whoever benefits.
    - Built-in features count: sign-up, log-in, password reset.

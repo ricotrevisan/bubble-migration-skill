@@ -42,7 +42,7 @@ One `## <Name>` heading per human persona, with: goal, how you found them (role,
 
 `decisions.md`: `## D001 <title>`, then the decision, the evidence, and what would change it.
 
-`open-questions.md`: `## Q001 <question>`, then why the app cannot answer it, your recommended answer, and the stories it affects. A question the app can answer is a gap in your exploration: go and find out.
+`open-questions.md`: `## Q001 <question>`, then why the rebuild depends on it, what you tried in the app (evidence ids), your recommended answer, and the stories it affects. A question the app can answer is a gap in your exploration: go and find out.
 
 ## Story file
 

@@ -16,6 +16,8 @@ Turn what you saw into the frame the backlog hangs on. Settle everything the evi
    - whether a dead-looking feature can go;
    - intent the app cannot show: the reason behind a rule, a planned change.
 
-   Before writing a question, ask: could a browser session answer this? If so, go and answer it.
+   Each question passes two gates before it goes in the file:
+   - **Rebuild gate**: the rebuild of *today's* app depends on the answer. Ideas for features the app lacks are not migration questions; leave them out, or list them once under "Possible later improvements" at the end of the file.
+   - **Evidence gate**: you tried to answer it in the app first. Record what you tried (journal entries) under "Tried". If a browser session could settle it, settle it and write a decision instead.
 
-Done when every persona has evidence, every dead-feature hint from the inventory has a decision, and every open question carries a recommended answer.
+Done when every persona has evidence, every dead-feature hint from the inventory has a decision, and every open question passes both gates and carries a recommended answer.
