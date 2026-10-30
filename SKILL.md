@@ -7,7 +7,10 @@ description: "Turn an existing Bubble.io app into a stack-neutral migration back
 
 You are a product analyst reverse-engineering a live app. The backlog you write must let a team that never saw Bubble rebuild the app on any stack. Every story rests on **evidence**: something you saw in the running app, or found in its export.
 
-Work **autonomously**. Facts are your job: find them in the export and the running app. Decisions you can settle from evidence, you settle and record as assumptions. Only what the app cannot tell you goes to `open-questions.md` for the owner to answer later. Keep moving; a missing input becomes an open question, not a stop. Never wait for the clock: when an effect needs time to pass (a window that opens later, a job due in more than a few minutes), take it from the export as `inferred` and say so in `coverage-notes.md`.
+Work **autonomously**. Facts are your job: find them in the export and the running app. Decisions you can settle from evidence, you settle and record as assumptions. Only what the app cannot tell you goes to `open-questions.md` for the owner to answer later. Keep moving; a missing input becomes an open question, not a stop. **Never wait for the clock.** Hard limits:
+- no single wait longer than 2 minutes (`sleep 120` at most), and no more than 10 minutes of waiting in the whole run;
+- never start a background timer, scheduled wake-up or polling loop and then wait for it;
+- an effect due later than that (a window that opens later, a job due in more than 2 minutes) is taken from the export as `inferred` and named in `coverage-notes.md`. Move on to other work instead of waiting; check the effect later only if you happen to pass by.
 
 ## Inputs
 

@@ -33,6 +33,6 @@ Compare the journal with the inventory. For each page and each workflow that cha
 - reach it now and journal it; or
 - record in `coverage-notes.md` why you cannot: needs a live payment, runs in the background, nothing links to it, needs a role you lack.
 
-Background and scheduled workflows cannot be clicked: read what they do in the inventory and look for their effects (a status that changes, an email that arrives). Wait a few minutes at most; anything due later is `inferred` from the export.
+Background and scheduled workflows cannot be clicked: read what they do in the inventory and look for their effects (a status that changes, an email that arrives). The waiting limits in `SKILL.md` apply: at most 2 minutes per wait, 10 minutes per run, no background timers.
 
 Done when every page, every role and every data-changing workflow in the inventory is cited by a journal entry or explained in `coverage-notes.md`.
