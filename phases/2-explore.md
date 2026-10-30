@@ -20,7 +20,9 @@ For the logged-out visitor, then each account:
 3. Do each thing the page lets you do, with realistic values: create, edit, change status, cancel. Prefer records you created; name them so you recognise them (`QA Logo for a café`).
 4. Probe each form once with a required field empty, once with an invalid value, and once with a value that must be unique but is taken (an email that already has an account, a duplicate entry); note each error.
 5. Open the other roles' pages by URL and note what happens.
-6. When an action should send an email and you can read the inbox, check it arrived and what it says.
+6. **Repeat and stale actions**: for each action that changes a status, do it twice, and do it again from a page you loaded before the status changed (keep an old tab, or use Back). Note whether the second attempt is refused and what it says.
+7. **Selection rules**: when the app picks one record out of several on its own (next in a queue, an assignment, who gets an offer), find out the order it uses and which candidates it skips and why. Set up a candidate who should be skipped ahead of one who should not, and see who is picked and whether the skipped one keeps their place.
+8. When an action should send an email and you can read the inbox, check it arrived and what it says.
 
 Write an entry in `evidence/journal.md` for every observation, as you go, with the inventory refs you recognise. Screenshots help for anything visual.
 

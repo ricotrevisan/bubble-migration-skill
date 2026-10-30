@@ -9,6 +9,8 @@ Write the stories, then the maps a builder needs beside them. Formats: [`../refe
    - Every validation error you hit is a scenario.
    - Every setting an admin can change gets a scenario for records that already exist: what keeps its old value and what follows the new one.
    - A page several roles share gets a scenario for each role's view: what each one sees and can change there.
+   - **Lifecycles**: for every status field, list its allowed transitions with who makes each and when. Every transition gets a scenario, and so do the guards: a move out of a final status is refused, a repeated or stale action changes nothing, and a transition outside its time window is refused.
+   - **Selection rules**: when the app picks one record among candidates, write scenarios for the order, for a candidate skipped because they are not eligible (and that they keep their place), and for what happens when nobody is eligible.
    - Emails, scheduled jobs and webhooks are stories too: persona `system`, written from the point of view of whoever benefits.
    - Built-in features count: sign-up, log-in, password reset.
    - Dead features become `drop-candidate` stories that cite their decision.
