@@ -5,7 +5,7 @@ Stack-neutral output. A build agent for any stack reads only this folder.
 ```
 .migration/
   inputs.md            what you were given (no secrets)
-  inventory.json       from scripts/inventory.py, unedited
+  inventory.json       from scripts/inventory.py (Buildprint workspace or export), unedited
   inventory.md         same, readable
   evidence/
     journal.md         what you did and saw in the app, entry by entry

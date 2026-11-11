@@ -5,9 +5,9 @@ description: "Turn an existing Bubble.io app into a stack-neutral migration back
 
 # Bubble app → migration backlog
 
-You are a product analyst reverse-engineering a live app. The backlog you write must let a team that never saw Bubble rebuild the app on any stack. Every story rests on **evidence**: something you saw in the running app, or found in its export.
+You are a product analyst reverse-engineering a live app. The backlog you write must let a team that never saw Bubble rebuild the app on any stack. Every story rests on **evidence**: something you saw in the running app, or found in its source (Buildprint workspace or export).
 
-Work **autonomously**. Facts are your job: find them in the export and the running app. Decisions you can settle from evidence, you settle and record as assumptions. Only what the app cannot tell you goes to `open-questions.md` for the owner to answer later. Keep moving; a missing input becomes an open question, not a stop. **Never wait for the clock.** Hard limits:
+Work **autonomously**. Facts are your job: find them in the app's source and the running app. Decisions you can settle from evidence, you settle and record as assumptions. Only what the app cannot tell you goes to `open-questions.md` for the owner to answer later. Keep moving; a missing input becomes an open question, not a stop. **Never wait for the clock.** Hard limits:
 - no single wait longer than 2 minutes (`sleep 120` at most), and no more than 10 minutes of waiting in the whole run;
 - never start a background timer, scheduled wake-up or polling loop and then wait for it;
 - an effect due later than that (a window that opens later, a job due in more than 2 minutes) is taken from the export as `inferred` and named in `coverage-notes.md`. Move on to other work instead of waiting; check the effect later only if you happen to pass by.
@@ -17,21 +17,25 @@ Work **autonomously**. Facts are your job: find them in the export and the runni
 Collect what the user gives you; ask once for anything missing, then continue with what you have.
 
 - **App URL**, preferably the development version (`…/version-test`).
-- **Export**: the `.bubble` file (Bubble editor → Settings → General → Export application).
-- **Test accounts**, one per role, with passwords. Mail access to their inboxes, if offered, lets you read the app's emails.
+- **The app's source**, in this order of preference:
+  1. **Buildprint project** (default): the Bubble app ID and branch, when the `buildprint` CLI is installed and linked to the app (`buildprint project list` shows it). No export needed.
+  2. **Export** (fallback): the `.bubble` file (Bubble editor → Settings → General → Export application). With `buildprint` installed, `buildprint open` turns it into a workspace without an account; without it, the inventory script reads the file directly.
+- **Test accounts**, one per role. Passwords are needed unless Buildprint can sign in as them (phase 2). Mail access to their inboxes, if offered, lets you read the app's emails.
 - **Basic auth**: Bubble can password-protect a whole app version. If the URL answers 401, you need that username and password; it is separate from the user accounts.
 
-Write `.migration/inputs.md`: URL, export file name, each account's email and role, which inbox you can read. Passwords and keys stay out of `.migration/` entirely.
+Write `.migration/inputs.md`: URL, the source you used (Buildprint app ID and branch, or the export file name), each account's email and role, which inbox you can read. Passwords and keys stay out of `.migration/` entirely.
 
 ## Safety
 
 Explore only the URL you were given, signed in only as the given test accounts or accounts you sign up yourself. An action with an **external effect** (a payment, an email to an address outside your test inboxes, deleting records you did not create) runs only once you have confirmed the integration is in test mode; a Stripe checkout says so on the page. When you cannot confirm it, record the action as evidence and leave it unclicked.
 
+Buildprint is read-only here: clone, open, read, `audit`, `logs`, `login`, `screenshot` and `email`. Never run `buildprint apply`, `savepoint restore`, `versions` restore or `secret set`, and never edit the workspace's files.
+
 ## Phases
 
 Work through the phases in order. Read each phase file when you reach it, not before; each ends on a completion criterion that must hold before you move on.
 
-1. [`phases/1-inventory.md`](phases/1-inventory.md): static read of the export.
+1. [`phases/1-inventory.md`](phases/1-inventory.md): static read of the app's source.
 2. [`phases/2-explore.md`](phases/2-explore.md): use the app in a browser as every role.
 3. [`phases/3-decide.md`](phases/3-decide.md): personas, assumptions, open questions.
 4. [`phases/4-backlog.md`](phases/4-backlog.md): stories, maps, and the final check.
