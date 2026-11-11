@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Static inventory of a Bubble app from its .bubble export.
+"""Static inventory of a Bubble app from a Buildprint workspace or a .bubble export.
 
-    python3 -I inventory.py app.bubble -o .migration/
+    python3 -I inventory.py <workspace-dir> -o .migration/   # from buildprint clone/open
+    python3 -I inventory.py app.bubble -o .migration/        # plain export
 
-Writes inventory.json (machine-readable, every item has a `ref`) and
+A Buildprint workspace keeps the app's Bubble JSON in
+`.buildprint/index.sqlite`; this script reassembles it, so both inputs give the
+same refs. Writes inventory.json (machine-readable, every item has a `ref`) and
 inventory.md (for reading). Standard library only. Reads the file; runs
 nothing. The export can hold API keys: this script never prints values of
 API Connector headers, parameters or bodies, only call names and URLs.
@@ -13,6 +16,7 @@ import argparse
 import json
 import pathlib
 import re
+import sqlite3
 import sys
 
 SKIP_ACTION_PROPS = {"condition", "action_disabled", "workflow_disabled", "breakpoint"}
@@ -26,13 +30,20 @@ EFFECT_ACTIONS = {
 
 
 def vals(m):
-    """Dict entries of a Bubble map; exports mix in counters and other scalars."""
-    return [v for v in m.values() if isinstance(v, dict)] if isinstance(m, dict) else []
+    """Dict entries of a Bubble map; exports mix in counters and other scalars.
+    Sorted by key (numbered maps such as actions by number), so a Buildprint
+    workspace and the export of the same app list things in the same order."""
+    if not isinstance(m, dict):
+        return []
+    items = [(k, v) for k, v in m.items() if isinstance(v, dict)]
+    numbered = all(str(k).isdigit() for k, _ in items)
+    return [v for _, v in sorted(items, key=lambda kv: int(kv[0]) if numbered else str(kv[0]))]
 
 
 class App:
-    def __init__(self, data):
+    def __init__(self, data, full_settings=True):
         self.d = data
+        self.full_settings = full_settings
         self.types = data.get("user_types") or {}
         self.option_sets = data.get("option_sets") or {}
         self.pages = data.get("pages") or {}
@@ -108,10 +119,10 @@ class App:
         return key
 
     def field_name(self, key):
-        for t in vals(self.types):
-            f = (t.get("fields") or {}).get(key)
-            if f:
-                return f.get("display", key)
+        # Field keys repeat across types; prefer a live field over a deleted one.
+        found = [f for _, t in sorted(self.types.items()) if isinstance(t, dict) and isinstance(f := (t.get("fields") or {}).get(key), dict)]
+        if found:
+            return min(found, key=lambda f: bool(f.get("deleted"))).get("display", key)
         return re.sub(r"_(text|number|boolean|date|user|image|file|option_\w+|custom_\w+|list_\w+)$", "", key) if isinstance(key, str) else key
 
     def render(self, x, depth=0):
@@ -124,7 +135,7 @@ class App:
         p = x.get("properties") or {}
         if t == "TextExpression":
             ents = x.get("entries") or {}
-            vals = ents.values() if isinstance(ents, dict) else ents
+            vals = [v for _, v in sorted(ents.items(), key=lambda kv: int(kv[0]) if str(kv[0]).isdigit() else 0)] if isinstance(ents, dict) else ents
             s = "".join(v if isinstance(v, str) else "[" + self.render(v, depth + 1) + "]" for v in vals)
         elif t == "CurrentUser":
             s = "Current User"
@@ -150,7 +161,7 @@ class App:
         elif t == "PageData":
             s = p.get("name", "page data")
         elif t == "GetParamFromUrl":
-            s = f"URL parameter {p.get('parameter_name', '')}"
+            s = f"URL parameter {self.render(p.get('parameter_name', ''), depth + 1)}"
         elif t == "CurrentWorkflowItem":
             s = "workflow input" + (f" {p.get('param_id')}" if p.get("param_id") else "")
         elif t == "CurrentDataItem":
@@ -292,7 +303,7 @@ class App:
                 "ref": f"page:{name}", "name": name, "title": self.render(pp.get("title")) if pp.get("title") else None,
                 "page_thing": self.type_name(pp.get("page_item_type")) if pp.get("page_item_type") else None,
                 "reached_from": inbound.get(name, []),
-                "custom_states": [s.get("display") or k for k, s in (p.get("custom_states") or {}).items()],
+                "custom_states": [s.get("display") or k for k, s in sorted((p.get("custom_states") or {}).items())],
                 "ui": self.ui(p), "workflows": self.workflows(p, name),
             })
         reusables = [{"ref": f"reusable:{r.get('name')}", "name": r.get("name"), "used_on": sorted(used_on.get(rid, [])),
@@ -340,7 +351,9 @@ class App:
                  if not p["reached_from"] and p["name"] not in ("index", "404", "reset_pw")]
         hints += [f"type `{t['name']}` is never created by a workflow" for t in types if not t["created_by_a_workflow"]]
         return {
-            "app": {"password_protected": bool(cs.get("pw_protection")), "plugins": sorted((cs.get("plugins") or {}).keys())},
+            # A Buildprint workspace drops these settings: None means unknown, not "no".
+            "app": {"password_protected": bool(cs.get("pw_protection")) if self.full_settings else None,
+                    "plugins": sorted((cs.get("plugins") or {}).keys()) if self.full_settings else None},
             "pages": pages, "reusables": reusables, "backend_workflows": backend, "data_types": types,
             "option_sets": options, "api_calls": calls, "side_effects": effects, "dead_feature_hints": hints,
         }
@@ -349,7 +362,10 @@ class App:
 def markdown(inv):
     L = ["# Inventory", "", "Static read of the export. Refs in backticks are the coverage targets.", ""]
     a = inv["app"]
-    L += [f"Password protected: {a['password_protected']}. Plugins: {', '.join(a['plugins']) or 'none'}.", ""]
+    if a["password_protected"] is None:
+        L += ["Password protection and plugins: not in the Buildprint workspace; a 401 on the app URL means basic auth.", ""]
+    else:
+        L += [f"Password protected: {a['password_protected']}. Plugins: {', '.join(a['plugins']) or 'none'}.", ""]
     L += ["## Pages", ""]
     for p in inv["pages"]:
         L.append(f"### `{p['ref']}`")
@@ -405,15 +421,50 @@ def wf_md(w):
     return out
 
 
+def merge(into, part):
+    for k, v in part.items():
+        if isinstance(v, dict) and isinstance(into.get(k), dict):
+            merge(into[k], v)
+        else:
+            into[k] = v
+
+
+def from_workspace(root):
+    """Reassemble the export-shaped app JSON from a Buildprint workspace."""
+    db = root / ".buildprint" / "index.sqlite"
+    if not db.exists():
+        hits = sorted(root.glob("*/.buildprint/index.sqlite"))
+        if len(hits) != 1:
+            sys.exit(f"{root}: no Buildprint workspace here; pass the branch folder (the one with .buildprint/)"
+                     + (f", one of: {', '.join(str(h.parent.parent) for h in hits)}" if hits else ""))
+        db = hits[0]
+    con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+    try:
+        rows = con.execute("SELECT json FROM snapshot_roots WHERE root_key NOT LIKE '\\_\\_%' ESCAPE '\\' ORDER BY root_key").fetchall()
+    except sqlite3.Error as e:
+        sys.exit(f"{db}: unreadable Buildprint index ({e}); export the app and pass the .bubble file instead")
+    finally:
+        con.close()
+    data = {}
+    for (j,) in rows:
+        part = json.loads(j)
+        if isinstance(part, dict):
+            merge(data, part)
+    return data
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("export")
+    ap.add_argument("source", help="Buildprint workspace folder or .bubble export")
     ap.add_argument("-o", "--out", default=".migration")
     args = ap.parse_args()
-    data = json.loads(pathlib.Path(args.export).read_text())
+    src = pathlib.Path(args.source)
+    data = from_workspace(src) if src.is_dir() else json.loads(src.read_text())
     if not isinstance(data, dict) or "pages" not in data:
-        sys.exit("not a Bubble app export (no `pages`)")
-    inv = App(data).build()
+        sys.exit("not a Bubble app (no `pages`)")
+    # Key order differs between the export and Buildprint; sort it so both give the same files.
+    data = json.loads(json.dumps(data, sort_keys=True))
+    inv = App(data, full_settings=not src.is_dir()).build()
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "inventory.json").write_text(json.dumps(inv, indent=1, ensure_ascii=False))
