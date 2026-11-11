@@ -1,4 +1,7 @@
-# bubble-migration
+# bubble-migration (beta)
+
+> **Beta.** Tested on small apps only. Expect rough edges, and please report
+> what breaks in [issues](https://github.com/ricotrevisan/bubble-migration-skill/issues).
 
 An agent skill for moving an app off Bubble. Your coding agent reads the app's
 editor data, uses the app in a browser as each of its user roles, and writes a
